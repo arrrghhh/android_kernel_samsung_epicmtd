@@ -1836,18 +1836,11 @@ static int selinux_binder_transaction(struct task_struct *from, struct task_stru
 	return avc_has_perm(fromsid, tosid, SECCLASS_BINDER, BINDER__CALL, NULL);
 }
 
-static int selinux_binder_transfer_binder(struct task_struct *from, struct task_struct *to, struct task_struct *owner)
+static int selinux_binder_transfer_binder(struct task_struct *from, struct task_struct *to)
 {
 	u32 fromsid = task_sid(from);
 	u32 tosid = task_sid(to);
-	u32 ownersid = task_sid(owner);
-	int rc;
-
-	rc = avc_has_perm(fromsid, ownersid, SECCLASS_BINDER, BINDER__TRANSFER, NULL);
-	if (rc)
-		return rc;
-
-	return avc_has_perm(tosid, ownersid, SECCLASS_BINDER, BINDER__RECEIVE, NULL);
+	return avc_has_perm(fromsid, tosid, SECCLASS_BINDER, BINDER__TRANSFER, NULL);
 }
 
 static int selinux_binder_transfer_file(struct task_struct *from, struct task_struct *to, struct file *file)
@@ -1870,6 +1863,9 @@ static int selinux_binder_transfer_file(struct task_struct *from, struct task_st
 		if (rc)
 			return rc;
 	}
+
+	if (unlikely(IS_PRIVATE(inode)))
+		return 0;
 
 	return avc_has_perm(sid, isec->sid, isec->sclass, file_to_av(file),
 			    &ad);
